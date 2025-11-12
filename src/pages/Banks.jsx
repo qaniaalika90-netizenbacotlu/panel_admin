@@ -1,26 +1,19 @@
-// src/pages/Banks.jsx
 import { useEffect, useState } from "react";
 import { listBanks, createBank, updateBank, deleteBank } from "../lib/api";
 
-const emptyForm = {
-  name: "", account_name: "", account_number: "",
-  method_type: "bank", status: "active",
-};
-
 export default function Banks() {
   const [items, setItems] = useState([]);
-  const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ bank_name:"", account_name:"", account_number:"", is_active:true });
+  const [error, setError] = useState("");
 
   const load = async () => {
-    setLoading(true);
+    setLoading(true); setError("");
     try {
       const { data } = await listBanks();
       setItems(data.items || []);
     } catch (e) {
-      console.error(e);
-      setItems([]);
+      setError(e?.response?.data?.error || e.message);
     } finally {
       setLoading(false);
     }
@@ -28,103 +21,75 @@ export default function Banks() {
 
   useEffect(() => { load(); }, []);
 
-  const submit = async (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
     try {
       await createBank(form);
-      setForm(emptyForm);
-      await load();
+      setForm({ bank_name:"", account_name:"", account_number:"", is_active:true });
+      load();
     } catch (e) {
-      console.error(e);
-    } finally {
-      setSaving(false);
+      alert(e?.response?.data?.error || e.message);
     }
   };
 
-  const saveRow = async (row) => {
+  const onToggle = async (it) => {
     try {
-      await updateBank(row.id, row);
-      await load();
+      await updateBank(it.id, { ...it, is_active: !it.is_active });
+      load();
     } catch (e) {
-      console.error(e);
+      alert(e?.response?.data?.error || e.message);
     }
   };
 
-  const remove = async (id) => {
-    if (!confirm("Delete this bank?")) return;
+  const onDelete = async (id) => {
+    if (!confirm("Delete bank?")) return;
     try {
       await deleteBank(id);
-      await load();
+      load();
     } catch (e) {
-      console.error(e);
+      alert(e?.response?.data?.error || e.message);
     }
   };
 
   return (
     <div className="p-6">
-      <h2 className="text-xl text-yellow-400 mb-4">Banks / Payment Channels</h2>
+      <h2 className="text-amber-300 text-xl mb-4">Banks</h2>
 
-      {/* Add form */}
-      <form onSubmit={submit} className="bg-[#0f172a] border border-white/5 rounded-lg p-4 mb-6 grid grid-cols-6 gap-3">
-        <input className="bg-neutral-900 text-gray-200 px-3 py-2 rounded" placeholder="Name (e.g. BCA / OVO)" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
-        <input className="bg-neutral-900 text-gray-200 px-3 py-2 rounded" placeholder="Account name" value={form.account_name} onChange={e=>setForm({...form,account_name:e.target.value})}/>
-        <input className="bg-neutral-900 text-gray-200 px-3 py-2 rounded" placeholder="Account number" value={form.account_number} onChange={e=>setForm({...form,account_number:e.target.value})}/>
-        <select className="bg-neutral-900 text-gray-200 px-3 py-2 rounded" value={form.method_type} onChange={e=>setForm({...form,method_type:e.target.value})}>
-          <option value="bank">Bank</option>
-          <option value="ewallet">E-Wallet</option>
-          <option value="va">Virtual Account</option>
-        </select>
-        <select className="bg-neutral-900 text-gray-200 px-3 py-2 rounded" value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-        <button disabled={saving} className="px-3 py-2 rounded bg-yellow-600/30 text-yellow-300 hover:bg-yellow-600/40">
-          {saving ? "Saving..." : "Add"}
-        </button>
+      <form onSubmit={onSubmit} className="mb-6 grid gap-2" style={{maxWidth:480}}>
+        <input required placeholder="Bank name" className="input" value={form.bank_name}
+               onChange={e=>setForm({...form, bank_name:e.target.value})}/>
+        <input required placeholder="Account name" className="input" value={form.account_name}
+               onChange={e=>setForm({...form, account_name:e.target.value})}/>
+        <input required placeholder="Account number" className="input" value={form.account_number}
+               onChange={e=>setForm({...form, account_number:e.target.value})}/>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={form.is_active}
+                 onChange={e=>setForm({...form, is_active:e.target.checked})}/>
+          Active
+        </label>
+        <button className="btn">Add Bank</button>
       </form>
 
-      {/* List */}
-      <div className="bg-[#0f172a] rounded-lg border border-white/5">
-        <div className="grid grid-cols-8 text-sm px-4 py-2 border-b border-white/5 text-gray-400">
-          <div>ID</div><div>Name</div><div>Acc Name</div><div>Acc No</div><div>Type</div><div>Status</div><div>Updated</div><div>Action</div>
-        </div>
-        {loading ? (
-          <div className="p-6 text-gray-400">Loading…</div>
-        ) : items.length === 0 ? (
-          <div className="p-6 text-gray-400">No data.</div>
-        ) : (
-          items.map((row) => (
-            <Row key={row.id} row={row} onSave={saveRow} onDelete={remove} />
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Row({ row, onSave, onDelete }) {
-  const [edit, setEdit] = useState(row);
-  return (
-    <div className="grid grid-cols-8 px-4 py-2 border-b border-white/5 text-gray-200">
-      <div>{row.id}</div>
-      <input className="bg-neutral-900 text-gray-200 px-2 py-1 rounded" value={edit.name} onChange={e=>setEdit({...edit,name:e.target.value})}/>
-      <input className="bg-neutral-900 text-gray-200 px-2 py-1 rounded" value={edit.account_name} onChange={e=>setEdit({...edit,account_name:e.target.value})}/>
-      <input className="bg-neutral-900 text-gray-200 px-2 py-1 rounded" value={edit.account_number} onChange={e=>setEdit({...edit,account_number:e.target.value})}/>
-      <select className="bg-neutral-900 text-gray-200 px-2 py-1 rounded" value={edit.method_type} onChange={e=>setEdit({...edit,method_type:e.target.value})}>
-        <option value="bank">Bank</option>
-        <option value="ewallet">E-Wallet</option>
-        <option value="va">VA</option>
-      </select>
-      <select className="bg-neutral-900 text-gray-200 px-2 py-1 rounded" value={edit.status} onChange={e=>setEdit({...edit,status:e.target.value})}>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-      </select>
-      <div>{new Date(row.updated_at).toLocaleString()}</div>
-      <div className="flex gap-2">
-        <button onClick={()=>onSave(edit)} className="px-2 py-1 rounded bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600/40">Save</button>
-        <button onClick={()=>onDelete(row.id)} className="px-2 py-1 rounded bg-red-600/30 text-red-300 hover:bg-red-600/40">Delete</button>
-      </div>
+      {error && <div className="alert">{error}</div>}
+      {loading ? <div>Loading…</div> : (
+        <table className="table">
+          <thead>
+            <tr><th>ID</th><th>Bank</th><th>Account</th><th>Number</th><th>Active</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+          {items.map(it=>(
+            <tr key={it.id}>
+              <td>{it.id}</td>
+              <td>{it.bank_name}</td>
+              <td>{it.account_name}</td>
+              <td>{it.account_number}</td>
+              <td><button className="chip" onClick={()=>onToggle(it)}>{it.is_active ? "yes":"no"}</button></td>
+              <td><button className="btn-danger" onClick={()=>onDelete(it.id)}>Delete</button></td>
+            </tr>
+          ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
