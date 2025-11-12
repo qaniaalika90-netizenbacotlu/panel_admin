@@ -42,6 +42,8 @@ export default function App() {
         <Route path="/history" element={<Layout><History/></Layout>} />
         <Route path="/banks" element={<Layout><Banks/></Layout>} />
         <Route path="*" element={<Layout><Health/></Layout>} />
+        <Route path="/banks" element={<Banks/>} />
+        <Route path="/history" element={<History/>} />
       </Routes>
     </BrowserRouter>
   );
