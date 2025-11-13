@@ -1,49 +1,87 @@
-// src/App.jsx
-import { BrowserRouter, Routes, Route, Link, NavLink } from "react-router-dom";
-import Health from "./pages/Health";
-import Deposits from "./pages/Deposits";
-import Withdrawals from "./pages/Withdrawals";
-import Members from "./pages/Members";
-import History from "./pages/History";
-import Banks from "./pages/Banks";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import HealthPage from "./pages/HealthPage";
+import DepositsPage from "./pages/DepositsPage";
+import WithdrawalsPage from "./pages/WithdrawalsPage";
+import MembersPage from "./pages/MembersPage";
+import HistoryPage from "./pages/HistoryPage";
+import BanksPage from "./pages/BanksPage";
+import LoginPage from "./pages/LoginPage"; // halaman login
 
-const Nav = () => (
-  <div className="w-full bg-[#0b1220] border-b border-white/5">
-    <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div className="text-lg text-yellow-400 font-semibold">Admin <span className="text-gray-300">Panel</span> <span className="text-xs text-gray-500">v0.1</span></div>
-      <div className="flex gap-6 text-sm">
-        {["/health","/deposits","/withdrawals","/members","/history","/banks"].map((p,i)=>(
-          <NavLink key={p} to={p} className={({isActive}) => isActive ? "text-white" : "text-gray-300 hover:text-white"}>
-            {["Health","Deposits","Withdrawals","Members","History","Banks"][i]}
-          </NavLink>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-const Layout = ({ children }) => (
-  <div className="min-h-screen bg-[#0a0f1a] text-gray-100">
-    <Nav/>
-    <div className="max-w-6xl mx-auto px-4 py-6">{children}</div>
-    <footer className="text-center text-sm text-gray-500 py-8">© 2025 — Admin Panel</footer>
-  </div>
-);
+// Komponen pembungkus untuk rute yang butuh login
+function PrivateRoute({ children }) {
+  const token = localStorage.getItem("admin_token");
+  if (!token) {
+    // kalau belum login → paksa ke /login
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Layout><Health/></Layout>} />
-        <Route path="/health" element={<Layout><Health/></Layout>} />
-        <Route path="/deposits" element={<Layout><Deposits/></Layout>} />
-        <Route path="/withdrawals" element={<Layout><Withdrawals/></Layout>} />
-        <Route path="/members" element={<Layout><Members/></Layout>} />
-        <Route path="/history" element={<Layout><History/></Layout>} />
-        <Route path="/banks" element={<Layout><Banks/></Layout>} />
-        <Route path="*" element={<Layout><Health/></Layout>} />
-        <Route path="/banks" element={<Banks/>} />
-        <Route path="/history" element={<History/>} />
+        {/* Rute login TIDAK butuh token */}
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* Semua rute lain harus lewat PrivateRoute */}
+        <Route
+          path="/health"
+          element={
+            <PrivateRoute>
+              <HealthPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/deposits"
+          element={
+            <PrivateRoute>
+              <DepositsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/withdrawals"
+          element={
+            <PrivateRoute>
+              <WithdrawalsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/members"
+          element={
+            <PrivateRoute>
+              <MembersPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <PrivateRoute>
+              <HistoryPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/banks"
+          element={
+            <PrivateRoute>
+              <BanksPage />
+            </PrivateRoute>
+          }
+        />
+
+        {/* default: kalau buka root "/" → arahkan ke /health (tapi lewat PrivateRoute juga) */}
+        <Route
+          path="/"
+          element={<Navigate to="/health" replace />}
+        />
+
+        {/* wildcard: kalau route nggak dikenal */}
+        <Route path="*" element={<Navigate to="/health" replace />} />
       </Routes>
     </BrowserRouter>
   );
